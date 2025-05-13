@@ -1,0 +1,155 @@
+-- Опционально: удалить существующие таблицы, если они есть
+-- Это полезно для повторного запуска скрипта при разработке
+DROP TABLE IF EXISTS cargos;
+DROP TABLE IF EXISTS employees;
+DROP TABLE IF EXISTS routes;
+DROP TABLE IF EXISTS clients;
+DROP TABLE IF EXISTS vehicles;
+
+-- Создание таблицы "Транспортное средство" (vehicles)
+CREATE TABLE vehicles (
+    id SERIAL PRIMARY KEY, -- Первичный ключ, автоинкремент
+    make VARCHAR(255), -- Марка
+    plate_number VARCHAR(50) UNIQUE, -- Номер, возможно уникальный
+    color VARCHAR(50), -- Цвет
+    condition TEXT, -- Состояние (используем TEXT для гибкости)
+    inspection_date DATE, -- Дата тех.осмотра
+    vehicle_type VARCHAR(100) -- Тип транспортного средства
+);
+
+-- Создание таблицы "Клиент" (clients)
+CREATE TABLE clients (
+    id SERIAL PRIMARY KEY, -- Первичный ключ, автоинкремент
+    first_name VARCHAR(100) NOT NULL, -- Имя (обязательное поле)
+    last_name VARCHAR(100) NOT NULL, -- Фамилия (обязательное поле)
+    middle_name VARCHAR(100), -- Отчество (необязательное поле)
+    date_of_birth DATE, -- Дата рождения
+    phone_number VARCHAR(50), -- Номер телефона
+    email VARCHAR(255) UNIQUE, -- Электронная почта (возможно уникальная)
+    address TEXT -- Адрес (используем TEXT для гибкости)
+);
+
+-- Создание таблицы "Маршрут" (routes)
+CREATE TABLE routes (
+    id SERIAL PRIMARY KEY, -- Первичный ключ, автоинкремент
+    route_number VARCHAR(50) UNIQUE NOT NULL, -- Номер маршрута (уникальный и обязательный)
+    origin VARCHAR(255) NOT NULL, -- Пункт отправления (обязательное)
+    destination VARCHAR(255) NOT NULL, -- Пункт назначения (обязательное)
+    departure_date DATE, -- Дата отправления
+    arrival_date DATE, -- Дата прибытия
+    route_distance NUMERIC(10, 2), -- Расстояние маршрута (например, до 99999999.99)
+    route_status VARCHAR(100), -- Статус маршрута
+    comments TEXT -- Комментарии
+);
+
+-- Создание таблицы "Сотрудник" (employees)
+CREATE TABLE employees (
+    id SERIAL PRIMARY KEY, -- Первичный ключ, автоинкремент
+    first_name VARCHAR(100) NOT NULL, -- Имя (обязательное поле)
+    last_name VARCHAR(100) NOT NULL, -- Фамилия (обязательное поле)
+    middle_name VARCHAR(100), -- Отчество (необязательное поле)
+    date_of_birth DATE, -- Дата рождения
+    phone_number VARCHAR(50), -- Номер телефона
+    email VARCHAR(255) UNIQUE, -- Электронная почта (возможно уникальная)
+    vehicle_id INTEGER -- Внешний ключ для связи с таблицей "vehicles"
+    -- Внешний ключ будет добавлен после создания всех таблиц
+);
+
+-- Создание таблицы "Груз" (cargos)
+CREATE TABLE cargos (
+    id SERIAL PRIMARY KEY, -- Первичный ключ, автоинкремент
+    client_id INTEGER NOT NULL, -- Внешний ключ для связи с таблицей "clients" (обязательно связан с клиентом)
+    employee_id INTEGER, -- Внешний ключ для связи с таблицей "employees" (необязательно, т.к. не всегда груз сразу присвоен сотруднику)
+    route_id INTEGER NOT NULL, -- Внешний ключ для связи с таблицей "routes" (обязательно связан с маршрутом)
+    cargo_name VARCHAR(255) NOT NULL, -- Наименование груза (обязательное)
+    payment_method VARCHAR(100), -- Метод оплаты
+    payment_status VARCHAR(100), -- Статус оплаты
+    cargo_status VARCHAR(100), -- Статус груза
+    cargo_weight NUMERIC(10, 3), -- Вес груза (например, до 9999999.999)
+    cargo_volume NUMERIC(10, 3) -- Объём груза (например, до 9999999.999)
+    -- Внешние ключи будут добавлены после создания всех таблиц
+);
+
+-- Добавление внешних ключей после создания всех таблиц
+-- Это обеспечивает правильный порядок зависимостей
+
+-- Внешний ключ для vehicle_id в таблице employees
+ALTER TABLE employees
+ADD CONSTRAINT fk_employee_vehicle
+FOREIGN KEY (vehicle_id)
+REFERENCES vehicles (id)
+ON DELETE SET NULL; -- Если транспортное средство удаляется, поле vehicle_id у сотрудника станет NULL
+
+-- Внешний ключ для client_id в таблице cargos
+ALTER TABLE cargos
+ADD CONSTRAINT fk_cargo_client
+FOREIGN KEY (client_id)
+REFERENCES clients (id)
+ON DELETE CASCADE; -- Если клиент удаляется, связанные грузы также удаляются
+
+-- Внешний ключ для employee_id в таблице cargos
+ALTER TABLE cargos
+ADD CONSTRAINT fk_cargo_employee
+FOREIGN KEY (employee_id)
+REFERENCES employees (id)
+ON DELETE SET NULL; -- Если сотрудник удаляется, поле employee_id у груза станет NULL
+
+-- Внешний ключ для route_id в таблице cargos
+ALTER TABLE cargos
+ADD CONSTRAINT fk_cargo_route
+FOREIGN KEY (route_id)
+REFERENCES routes (id)
+ON DELETE RESTRICT; -- Если маршрут удаляется, удаление будет запрещено, если есть связанные грузы (или используйте ON DELETE CASCADE/SET NULL по логике бизнеса)
+
+-- Комментарии к таблицам и полям
+COMMENT ON TABLE vehicles IS 'Информация о транспортных средствах.';
+COMMENT ON COLUMN vehicles.id IS 'Уникальный идентификатор транспортного средства (первичный ключ).';
+COMMENT ON COLUMN vehicles.make IS 'Марка транспортного средства.';
+COMMENT ON COLUMN vehicles.plate_number IS 'Государственный номер транспортного средства.';
+COMMENT ON COLUMN vehicles.color IS 'Цвет транспортного средства.';
+COMMENT ON COLUMN vehicles.condition IS 'Текущее состояние транспортного средства.';
+COMMENT ON COLUMN vehicles.inspection_date IS 'Дата последнего технического осмотра.';
+COMMENT ON COLUMN vehicles.vehicle_type IS 'Тип транспортного средства (например, грузовик, фургон).';
+
+COMMENT ON TABLE clients IS 'Информация о клиентах.';
+COMMENT ON COLUMN clients.id IS 'Уникальный идентификатор клиента (первичный ключ).';
+COMMENT ON COLUMN clients.first_name IS 'Имя клиента.';
+COMMENT ON COLUMN clients.last_name IS 'Фамилия клиента.';
+COMMENT ON COLUMN clients.middle_name IS 'Отчество клиента.';
+COMMENT ON COLUMN clients.date_of_birth IS 'Дата рождения клиента.';
+COMMENT ON COLUMN clients.phone_number IS 'Контактный номер телефона клиента.';
+COMMENT ON COLUMN clients.email IS 'Адрес электронной почты клиента.';
+COMMENT ON COLUMN clients.address IS 'Адрес клиента.';
+
+COMMENT ON TABLE routes IS 'Информация о маршрутах перевозок.';
+COMMENT ON COLUMN routes.id IS 'Уникальный идентификатор маршрута (первичный ключ).';
+COMMENT ON COLUMN routes.route_number IS 'Уникальный номер маршрута.';
+COMMENT ON COLUMN routes.origin IS 'Пункт отправления маршрута.';
+COMMENT ON COLUMN routes.destination IS 'Пункт назначения маршрута.';
+COMMENT ON COLUMN routes.departure_date IS 'Планируемая или фактическая дата отправления по маршруту.';
+COMMENT ON COLUMN routes.arrival_date IS 'Планируемая или фактическая дата прибытия по маршруту.';
+COMMENT ON COLUMN routes.route_distance IS 'Расстояние по маршруту в условных единицах (например, км).';
+COMMENT ON COLUMN routes.route_status IS 'Текущий статус маршрута (например, Запланирован, Активен, Завершен).';
+COMMENT ON COLUMN routes.comments IS 'Дополнительные комментарии к маршруту.';
+
+COMMENT ON TABLE employees IS 'Информация о сотрудниках.';
+COMMENT ON COLUMN employees.id IS 'Уникальный идентификатор сотрудника (первичный ключ).';
+COMMENT ON COLUMN employees.first_name IS 'Имя сотрудника.';
+COMMENT ON COLUMN employees.last_name IS 'Фамилия сотрудника.';
+COMMENT ON COLUMN employees.middle_name IS 'Отчество сотрудника.';
+COMMENT ON COLUMN employees.date_of_birth IS 'Дата рождения сотрудника.';
+COMMENT ON COLUMN employees.phone_number IS 'Контактный номер телефона сотрудника.';
+COMMENT ON COLUMN employees.email IS 'Адрес электронной почты сотрудника.';
+COMMENT ON COLUMN employees.vehicle_id IS 'Внешний ключ к таблице vehicles, указывающий на закрепленное транспортное средство.';
+
+COMMENT ON TABLE cargos IS 'Информация о перевозимых грузах.';
+COMMENT ON COLUMN cargos.id IS 'Уникальный идентификатор груза (первичный ключ).';
+COMMENT ON COLUMN cargos.client_id IS 'Внешний ключ к таблице clients, указывающий на клиента-отправителя.';
+COMMENT ON COLUMN cargos.employee_id IS 'Внешний ключ к таблице employees, указывающий на сотрудника, ответственного за груз.';
+COMMENT ON COLUMN cargos.route_id IS 'Внешний ключ к таблице routes, указывающий на маршрут перевозки груза.';
+COMMENT ON COLUMN cargos.cargo_name IS 'Наименование или описание груза.';
+COMMENT ON COLUMN cargos.payment_method IS 'Метод оплаты за перевозку (например, Наличные, Карта, Безнал).';
+COMMENT ON COLUMN cargos.payment_status IS 'Статус оплаты (например, Ожидает оплаты, Оплачен, Просрочен).';
+COMMENT ON COLUMN cargos.cargo_status IS 'Текущий статус груза (например, Принят, В пути, Доставлен, Отменен).';
+COMMENT ON COLUMN cargos.cargo_weight IS 'Вес груза в условных единицах (например, кг).';
+COMMENT ON COLUMN cargos.cargo_volume IS 'Объём груза в условных единицах (например, м³).';

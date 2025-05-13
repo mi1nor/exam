@@ -1,0 +1,12 @@
+Задача: Получить список всех грузов и имена клиентов, которым они принадлежат.
+Описание: Этот запрос соединяет таблицы cargos и clients по полю client_id. 
+Результат включает наименование груза из таблицы cargos и имя/фамилию клиента из таблицы clients для каждого груза.
+
+SELECT
+    c.cargo_name,
+    cl.first_name AS client_first_name,
+    cl.last_name AS client_last_name
+FROM
+    cargos c
+JOIN
+    clients cl ON c.client_id = cl.id;
